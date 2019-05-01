@@ -1,0 +1,61 @@
+DataSet dspending = new DataSet();
+
+            try
+            {
+
+                if (Token == "")
+                {
+                    string clientId = ConfigurationManager.AppSettings["ClientId"].ToString();
+                    string clientSecret = ConfigurationManager.AppSettings["SecretId"].ToString();
+                    Token = getAccessToken(clientId, clientSecret);
+                }
+
+                AppendLog("Pending label status Token :" + Token);
+
+                AppendLog("GetPendingLabelStatus Starts");
+                string[] paramname = new string[2];
+                string[] paramvalue = new string[2];
+
+                //mailsendCount = 0;
+                dspending = Query.GetDataSet("Qry_GetNZPendingLabelStatus", CommandType.StoredProcedure);
+
+                if (dspending.Tables[0].Rows.Count > 0)
+                {
+                    foreach (DataRow dr in dspending.Tables[0].Rows)
+                    {
+                        try
+                        {
+                            ClsManifestHdr objhdr = new ClsManifestHdr();
+                            objhdr.ReleaseId = Convert.ToInt64(dr["ReleaseId"].ToString());
+                            objhdr.OrderId = Convert.ToInt64(dr["OrderId"].ToString());
+                            objhdr.ClientId = Convert.ToInt64(dr["ClientId"].ToString());
+                            objhdr.ConsignmentId = dr["Consignment_id"].ToString();
+                            objhdr.Senderreference1 = dr["Sender_Reference_1"].ToString();
+                            GetNZLabelStatus(objhdr, objhdr.ConsignmentId, Token);
+                        }
+                        catch (Exception ex)
+                        {
+                            AppendLog("GetPendingLabelStatus " + dr["ReleaseId"].ToString() + "," + dr["OrderId"].ToString());
+                            continue;
+                        }
+                    }
+                }
+                AppendLog("GetPendingLabelStatus Ends");
+            }
+            catch (Exception ex)
+            {
+
+                if (ex.Message.ToString().Contains("token expired"))
+                {
+                    AppendLog("token expired");
+                    Token = "";
+                }
+                if (ex.Message.Contains("The remote server returned an error: (401) Unauthorized."))
+                {
+                    AppendLog("token expired");
+                    Token = "";
+                }
+                AppendLog("GetPendingLabelStatus :" + ex.Message);
+                throw ex;
+            }
+        }
